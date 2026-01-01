@@ -19,6 +19,7 @@ const Toolbar = ({
                 onChange={e => onSelectHabit(e.target.value)}
             >
                 <option value="all">All habits</option>
+                <option value="active">Active habits</option>
                 {activeHabits.map(h => (
                     <option key={h.id} value={h.id}>
                         {h.name}
@@ -27,7 +28,7 @@ const Toolbar = ({
             </select>
 
             <button onClick={onAddHabit}>+</button>
-            <button onClick={onRemoveHabit} disabled={selectedHabit === 'all'}>
+            <button onClick={onRemoveHabit} disabled={selectedHabit === 'all' || selectedHabit === "active"}>
                 -
             </button>
 

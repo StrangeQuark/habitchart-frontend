@@ -47,23 +47,29 @@ const getDatesForView = (viewMode, year) => {
 }
 
 
-const calculateIntensity = (entry, activeHabits, selectedHabit) => {
-    if (selectedHabit !== 'all') {
+const calculateIntensity = (entry, habits, selectedHabit) => {
+    if (habits.length === 0) return 0
+
+    if (selectedHabit !== 'all' && selectedHabit !== 'active') {
         return entry[selectedHabit] ? 1 : 0
     }
 
-    if (activeHabits.length === 0) return 0
-
     let completed = 0
-    for (const habit of activeHabits) {
-        if (entry[habit.id]) completed++
+    for (const habit of habits) {
+        if (entry[habit.id]) {
+            if(selectedHabit === 'active') {
+                if(habit.active)
+                    completed++
+            } else {
+                completed++
+            }
+        }
     }
 
-    return completed / activeHabits.length
+    return completed / habits.length
 }
 
 const Chart = ({ habits, entries, selectedHabit, viewMode, year }) => {
-    const activeHabits = Object.values(habits).filter(h => h.active)
     const dates = getDatesForView(viewMode, year)
 
     return (
@@ -72,7 +78,7 @@ const Chart = ({ habits, entries, selectedHabit, viewMode, year }) => {
                 const entry = entries[date] || {}
                 const intensity = calculateIntensity(
                     entry,
-                    activeHabits,
+                    Object.values(habits),
                     selectedHabit
                 )
 
