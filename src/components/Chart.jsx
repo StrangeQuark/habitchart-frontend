@@ -1,11 +1,20 @@
 import Tile from './Tile'
 import './css/Chart.css'
 
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+const toDateKey = (date) => {
+    return [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0')
+    ].join('-')
+}
+
 const getDatesForView = (viewMode, year) => {
     const dates = []
     const now = new Date()
 
-    // Anchor to local midnight
     const today = new Date(
         now.getFullYear(),
         now.getMonth(),
@@ -22,7 +31,6 @@ const getDatesForView = (viewMode, year) => {
         start = new Date(today.getFullYear(), today.getMonth(), 1)
         end = new Date(today.getFullYear(), today.getMonth() + 1, 0)
     } else {
-        // Week view — Sunday start (0 = Sunday)
         const dayOfWeek = today.getDay()
         start = new Date(today)
         start.setDate(today.getDate() - dayOfWeek)
@@ -33,19 +41,24 @@ const getDatesForView = (viewMode, year) => {
 
     const current = new Date(start)
     while (current <= end) {
-        dates.push(
-            [
-                current.getFullYear(),
-                String(current.getMonth() + 1).padStart(2, '0'),
-                String(current.getDate()).padStart(2, '0')
-            ].join('-')
-        )
+        dates.push(toDateKey(current))
         current.setDate(current.getDate() + 1)
     }
 
     return dates
 }
 
+const padDatesForWeeks = (dates) => {
+    if (dates.length === 0) return []
+
+    const firstDate = new Date(dates[0] + 'T00:00:00')
+    const leadingDays = firstDate.getDay()
+
+    return [
+        ...Array(leadingDays).fill(null),
+        ...dates
+    ]
+}
 
 const calculateIntensity = (entry, habits, selectedHabit) => {
     if (habits.length === 0) return 0
@@ -55,14 +68,14 @@ const calculateIntensity = (entry, habits, selectedHabit) => {
     }
 
     let completed = 0
+
     for (const habit of habits) {
-        if (entry[habit.id]) {
-            if(selectedHabit === 'active') {
-                if(habit.active)
-                    completed++
-            } else {
-                completed++
-            }
+        if (!entry[habit.id]) continue
+
+        if (selectedHabit === 'active') {
+            if (habit.active) completed++
+        } else {
+            completed++
         }
     }
 
@@ -71,26 +84,46 @@ const calculateIntensity = (entry, habits, selectedHabit) => {
 
 const Chart = ({ habits, entries, selectedHabit, viewMode, year }) => {
     const dates = getDatesForView(viewMode, year)
+    const paddedDates = padDatesForWeeks(dates)
 
     return (
-        <div className="chart">
-            {dates.map(date => {
-                const entry = entries[date] || {}
-                const intensity = calculateIntensity(
-                    entry,
-                    Object.values(habits),
-                    selectedHabit
-                )
+        <div className="chart-wrapper">
+            <div className="chart-labels">
+                {WEEKDAYS.map(day => (
+                    <div key={day} className="chart-label">
+                        {day}
+                    </div>
+                ))}
+            </div>
 
-                return (
-                    <Tile
-                        key={date}
-                        date={date}
-                        intensity={intensity}
-                        entry={entry}
-                    />
-                )
-            })}
+            <div className="chart">
+                {paddedDates.map((date, index) => {
+                    if (!date) {
+                        return (
+                            <div
+                                key={`empty-${index}`}
+                                className="tile tile--empty"
+                            />
+                        )
+                    }
+
+                    const entry = entries[date] || {}
+                    const intensity = calculateIntensity(
+                        entry,
+                        Object.values(habits),
+                        selectedHabit
+                    )
+
+                    return (
+                        <Tile
+                            key={date}
+                            date={date}
+                            intensity={intensity}
+                            entry={entry}
+                        />
+                    )
+                })}
+            </div>
         </div>
     )
 }
