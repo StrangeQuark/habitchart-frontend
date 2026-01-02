@@ -87,6 +87,7 @@ const Chart = ({ habits, entries, selectedHabit, viewMode, year }) => {
                         key={date}
                         date={date}
                         intensity={intensity}
+                        entry={entry}
                     />
                 )
             })}

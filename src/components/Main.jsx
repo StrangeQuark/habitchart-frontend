@@ -77,7 +77,7 @@ const Main = () => {
             }
         }))
 
-        setSelectedHabit('all')
+        setSelectedHabit('active')
     }
 
     const openProgressPopup = () => {
@@ -88,7 +88,7 @@ const Main = () => {
         Object.values(data.habits)
             .filter(h => h.active)
             .forEach(h => {
-                draft[h.id] = !!existing[h.id]
+                draft[h.id] = !!existing[h.id]?.completed
             })
 
         setProgressDraft(draft)
@@ -98,16 +98,31 @@ const Main = () => {
     const saveProgress = () => {
         const today = todayKey()
 
-        setData(prev => ({
-            ...prev,
-            entries: {
-                ...prev.entries,
-                [today]: {
-                    ...(prev.entries[today] || {}),
-                    ...progressDraft
+        setData(prev => {
+            const dayEntries = prev.entries[today] || {}
+
+            const updatedEntries = {}
+            Object.entries(progressDraft).forEach(([habitId, completed]) => {
+                const habit = prev.habits[habitId]
+                if (!habit) return
+
+                updatedEntries[habitId] = {
+                    completed,
+                    name: habit.name
+                }
+            })
+
+            return {
+                ...prev,
+                entries: {
+                    ...prev.entries,
+                    [today]: {
+                        ...dayEntries,
+                        ...updatedEntries
+                    }
                 }
             }
-        }))
+        })
 
         setShowProgressPopup(false)
     }
