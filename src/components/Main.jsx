@@ -28,7 +28,7 @@ const todayKey = () => localDateKey()
 
 const Main = () => {
     const [data, setData] = useState(emptyData)
-    const [selectedHabit, setSelectedHabit] = useState('all')
+    const [selectedHabit, setSelectedHabit] = useState('active')
     const [viewMode, setViewMode] = useState('year')
     const [showProgressPopup, setShowProgressPopup] = useState(false)
     const [progressDraft, setProgressDraft] = useState({})
@@ -112,6 +112,11 @@ const Main = () => {
         setShowProgressPopup(false)
     }
 
+    const deleteAllData = () => {
+        if(confirm("Delete all data? This action cannot be undone!"))
+            setData(emptyData)
+    }
+
     return (
         <div className="main">
             <Toolbar
@@ -123,6 +128,7 @@ const Main = () => {
                 onAddProgress={openProgressPopup}
                 viewMode={viewMode}
                 onChangeView={setViewMode}
+                onDeleteAllData={deleteAllData}
             />
 
             <Chart

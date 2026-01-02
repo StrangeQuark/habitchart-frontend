@@ -8,7 +8,8 @@ const Toolbar = ({
     onRemoveHabit,
     onAddProgress,
     viewMode,
-    onChangeView
+    onChangeView,
+    onDeleteAllData
 }) => {
     const activeHabits = Object.values(habits).filter(h => h.active)
 
@@ -42,6 +43,8 @@ const Toolbar = ({
                 <option value="month">Month</option>
                 <option value="week">Week</option>
             </select>
+
+            <button onClick={onDeleteAllData}>Delete all data</button>
         </div>
     )
 }
