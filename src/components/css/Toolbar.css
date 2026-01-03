@@ -2,4 +2,19 @@
     display: flex;
     gap: 8px;
     margin-bottom: 12px;
+    justify-content: space-between;
+    height: 3vh;
+}
+
+.left-toolbar-div {
+    display: flex;
+    gap: 12px;
+}
+
+.view-mode-select {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30vw;
+    height: 3vh;
 }
