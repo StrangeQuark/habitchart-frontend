@@ -3,13 +3,11 @@ import './css/Chart.css'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-const toDateKey = (date) => {
-    return [
+const toDateKey = (date) => [
         date.getFullYear(),
         String(date.getMonth() + 1).padStart(2, '0'),
         String(date.getDate()).padStart(2, '0')
     ].join('-')
-}
 
 const getDatesForView = (viewMode, year) => {
     const dates = []
@@ -31,6 +29,7 @@ const getDatesForView = (viewMode, year) => {
         start = new Date(today.getFullYear(), today.getMonth(), 1)
         end = new Date(today.getFullYear(), today.getMonth() + 1, 0)
     } else {
+        // week
         const dayOfWeek = today.getDay()
         start = new Date(today)
         start.setDate(today.getDate() - dayOfWeek)
@@ -48,8 +47,10 @@ const getDatesForView = (viewMode, year) => {
     return dates
 }
 
+/* ---------- padding ---------- */
+
 const padDatesForWeeks = (dates) => {
-    if (dates.length === 0) return []
+    if (!dates.length) return []
 
     const firstDate = new Date(dates[0] + 'T00:00:00')
     const leadingDays = firstDate.getDay()
@@ -60,69 +61,180 @@ const padDatesForWeeks = (dates) => {
     ]
 }
 
+const padDatesForMonth = (dates) => {
+    if (!dates.length) return []
+
+    const first = new Date(dates[0] + 'T00:00:00')
+    const last = new Date(dates[dates.length - 1] + 'T00:00:00')
+
+    const leading = first.getDay()
+    const trailing = 6 - last.getDay()
+
+    return [
+        ...Array(leading).fill(null),
+        ...dates,
+        ...Array(trailing).fill(null)
+    ]
+}
+
+/* ---------- intensity ---------- */
+
 const calculateIntensity = (entry, habits, selectedHabit) => {
-    if (habits.length === 0) return 0
+    if (!habits.length) return 0
 
     if (selectedHabit !== 'all' && selectedHabit !== 'active') {
-        return entry[selectedHabit] ? 1 : 0
+        return entry[selectedHabit]?.completed ? 1 : 0
     }
 
     let completed = 0
 
     for (const habit of habits) {
-        if (!entry[habit.id]) continue
-
-        if (selectedHabit === 'active') {
-            if (habit.active) completed++
-        } else {
-            completed++
-        }
+        if (!entry[habit.id]?.completed) continue
+        if (selectedHabit === 'active' && !habit.active) continue
+        completed++
     }
 
     return completed / habits.length
 }
 
+/* ---------- shared renderer ---------- */
+
+const renderTiles = (dates, entries, habits, selectedHabit) =>
+    dates.map((date, index) => {
+        if (!date) {
+            return (
+                <div
+                    key={`empty-${index}`}
+                    className="tile tile--empty"
+                />
+            )
+        }
+
+        const entry = entries[date] || {}
+
+        return (
+            <Tile
+                key={date}
+                date={date}
+                entry={entry}
+                intensity={calculateIntensity(
+                    entry,
+                    habits,
+                    selectedHabit
+                )}
+            />
+        )
+    })
+
+/* ---------- component ---------- */
+
 const Chart = ({ habits, entries, selectedHabit, viewMode, year }) => {
-    const dates = getDatesForView(viewMode, year)
-    const paddedDates = padDatesForWeeks(dates)
+    const habitList = Object.values(habits)
 
-    return (
-        <div className="chart-wrapper">
-            <div className="chart-labels">
-                {WEEKDAYS.map(day => (
-                    <div key={day} className="chart-label">
-                        {day}
-                    </div>
-                ))}
+    /* ===== YEAR (RESTORED EXACTLY) ===== */
+    if (viewMode === 'year') {
+        const dates = getDatesForView('year', year)
+        const paddedDates = padDatesForWeeks(dates)
+
+        return (
+            <div className="chart-wrapper">
+                <div className="chart-labels">
+                    {WEEKDAYS.map(day => (
+                        <div key={day} className="chart-label">
+                            {day}
+                        </div>
+                    ))}
+                </div>
+
+                <div className="chart">
+                    {renderTiles(
+                        paddedDates,
+                        entries,
+                        habitList,
+                        selectedHabit
+                    )}
+                </div>
             </div>
+        )
+    }
 
-            <div className="chart">
-                {paddedDates.map((date, index) => {
-                    if (!date) {
-                        return (
-                            <div
-                                key={`empty-${index}`}
-                                className="tile tile--empty"
-                            />
-                        )
+    /* ===== YEAR CALENDAR ===== */
+    if (viewMode === 'year-calendar') {
+        return (
+            <div className="year-calendar">
+                {Array.from({ length: 12 }).map((_, month) => {
+                    const start = new Date(year, month, 1)
+                    const end = new Date(year, month + 1, 0)
+
+                    const dates = []
+                    const current = new Date(start)
+                    while (current <= end) {
+                        dates.push(toDateKey(current))
+                        current.setDate(current.getDate() + 1)
                     }
 
-                    const entry = entries[date] || {}
-                    const intensity = calculateIntensity(
-                        entry,
-                        Object.values(habits),
-                        selectedHabit
-                    )
+                    const padded = padDatesForMonth(dates)
 
                     return (
-                        <Tile
-                            key={date}
-                            date={date}
-                            intensity={intensity}
-                            entry={entry}
-                        />
+                        <div key={month} className="calendar-month">
+                            <div className="calendar-month-title">
+                                {start.toLocaleString('default', {
+                                    month: 'long'
+                                })}
+                            </div>
+
+                            <div className="calendar-weekdays">
+                                {WEEKDAYS.map(d => (
+                                    <div key={d}>{d}</div>
+                                ))}
+                            </div>
+
+                            <div className="calendar-grid">
+                                {renderTiles(
+                                    padded,
+                                    entries,
+                                    habitList,
+                                    selectedHabit
+                                )}
+                            </div>
+                        </div>
                     )
                 })}
+            </div>
+        )
+    }
+
+    /* ===== MONTH / WEEK ===== */
+
+    const dates = getDatesForView(viewMode, year)
+    const padded =
+        viewMode === 'month'
+            ? padDatesForMonth(dates)
+            : padDatesForWeeks(dates)
+
+    return (
+        <div className={`chart chart--${viewMode}`}>
+            {viewMode === 'month' && (
+                <div className="calendar-weekdays">
+                    {WEEKDAYS.map(d => (
+                        <div key={d}>{d}</div>
+                    ))}
+                </div>
+            )}
+
+            <div
+                className={
+                    viewMode === 'month'
+                        ? 'calendar-grid'
+                        : 'heatmap-grid'
+                }
+            >
+                {renderTiles(
+                    padded,
+                    entries,
+                    habitList,
+                    selectedHabit
+                )}
             </div>
         </div>
     )

@@ -28,8 +28,8 @@ const Toolbar = ({
                         </option>
                     ))}
                 </select>
-                <button onClick={onAddHabit}>+</button>
-                <button onClick={onRemoveHabit} disabled={selectedHabit === 'all' || selectedHabit === "active"}>-</button>
+                <button onClick={onAddHabit}>Add habit</button>
+                <button onClick={onRemoveHabit} disabled={selectedHabit === 'all' || selectedHabit === "active"}>Remove habit</button>
                 <button onClick={onAddProgress}>Add Progress</button>
             </div>
 
@@ -39,6 +39,7 @@ const Toolbar = ({
                 className='view-mode-select'
             >
                 <option value="year">Year</option>
+                <option value="year-calendar">Year (Calendar)</option>
                 <option value="month">Month</option>
                 <option value="week">Week</option>
             </select>
