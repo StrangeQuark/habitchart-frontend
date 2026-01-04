@@ -131,7 +131,7 @@ const renderTiles = (dates, entries, habits, selectedHabit) =>
 const Chart = ({ habits, entries, selectedHabit, viewMode, year }) => {
     const habitList = Object.values(habits)
 
-    /* ===== YEAR (RESTORED EXACTLY) ===== */
+    /* ===== YEAR ===== */
     if (viewMode === 'year') {
         const dates = getDatesForView('year', year)
         const paddedDates = padDatesForWeeks(dates)

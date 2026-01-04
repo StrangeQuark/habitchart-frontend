@@ -63,8 +63,8 @@
 }
 
 .year-calendar {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 30% 30% 30%;
     gap: 20px;
     max-height: calc(100vh - 120px);
     overflow-y: auto;
