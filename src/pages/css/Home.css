@@ -1,7 +1,3 @@
 .home {
-}
-
-@media (max-width: 900px) {
-    .home {
-    }
+  min-height: 100vh;
 }

@@ -1,31 +1,370 @@
-.main {
-    padding: 16px;
-    font-family: system-ui, sans-serif;
+.app-shell {
+  --tile-size: 13px;
+  --tile-gap: 4px;
+  min-height: 100vh;
 }
 
-.popup-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.dashboard,
+.lower-grid {
+  display: grid;
+  gap: 18px;
+  padding: 0 clamp(16px, 4vw, 42px) 18px;
 }
 
-.popup {
-    background: white;
-    padding: 16px;
-    border-radius: 6px;
-    min-width: 240px;
+.dashboard {
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr) minmax(260px, 320px);
+  align-items: start;
 }
 
-.popup label {
-    display: block;
-    margin-bottom: 8px;
+.lower-grid {
+  grid-template-columns: minmax(300px, 1.3fr) minmax(320px, 1.5fr) minmax(260px, 0.8fr);
+  padding-bottom: 42px;
 }
 
-.popup-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
+.today-panel,
+.chart-panel,
+.metric-panel,
+.reminder-panel,
+.day-detail-panel,
+.manage-panel,
+.backup-panel {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.insight-column {
+  display: grid;
+  gap: 18px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.section-heading p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.primary-button,
+.icon-button,
+.toolbar button,
+.habit-actions button,
+.manage-row button,
+.backup-actions button {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  min-height: 38px;
+}
+
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  font-weight: 700;
+}
+
+.primary-button:hover {
+  background: var(--accent-strong);
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.add-habit-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.add-habit-form input,
+.field-label input,
+.manage-row input,
+.select-label select {
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 10px;
+}
+
+.color-picker {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+}
+
+.color-swatch {
+  width: 24px;
+  height: 24px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--habit-color);
+}
+
+.color-swatch--selected {
+  border-color: var(--text);
+  box-shadow: 0 0 0 3px rgba(23, 32, 24, 0.1);
+}
+
+.habit-checklist,
+.habit-management-list,
+.day-detail-list {
+  display: grid;
+  gap: 10px;
+}
+
+.habit-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.habit-row--done {
+  border-color: #a9dcb3;
+  background: #f2fbf4;
+}
+
+.habit-row--skipped {
+  border-color: #d8cfb4;
+  background: #fff9ec;
+}
+
+.habit-row--missed {
+  border-color: #e6b7bd;
+  background: #fff4f5;
+}
+
+.habit-toggle {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--habit-color);
+  border-radius: 8px;
+  background: white;
+  color: white;
+}
+
+.habit-row--done .habit-toggle {
+  background: var(--habit-color);
+}
+
+.habit-main {
+  min-width: 0;
+}
+
+.habit-main strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.habit-main span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  margin-top: 2px;
+}
+
+.habit-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.habit-actions button,
+.manage-row button,
+.backup-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 10px;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metric-grid div,
+.best-day {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 12px;
+}
+
+.metric-grid span {
+  display: block;
+  font-weight: 800;
+  font-size: 1.35rem;
+}
+
+.metric-grid small,
+.best-day span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.best-day {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.field-label {
+  display: grid;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.day-detail-row,
+.manage-row {
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.day-detail-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.day-detail-row strong {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  text-transform: capitalize;
+}
+
+.habit-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--habit-color);
+}
+
+.manage-row {
+  grid-template-columns: auto minmax(150px, 1fr) auto auto auto auto;
+}
+
+.manage-row--archived {
+  opacity: 0.7;
+}
+
+.manage-row span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.backup-actions input[type="file"] {
+  display: none;
+}
+
+.empty-state {
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  padding: 18px;
+  text-align: center;
+}
+
+@media (max-width: 1180px) {
+  .dashboard,
+  .lower-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    --tile-size: 11px;
+    --tile-gap: 3px;
+  }
+
+  .today-panel,
+  .chart-panel,
+  .metric-panel,
+  .reminder-panel,
+  .day-detail-panel,
+  .manage-panel,
+  .backup-panel {
+    padding: 14px;
+  }
+
+  .habit-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .habit-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  .manage-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .manage-row span:nth-of-type(2),
+  .manage-row span:nth-of-type(3) {
+    display: none;
+  }
 }

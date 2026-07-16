@@ -1,243 +1,71 @@
+import { getMonthLabelForWeek, getYearWeeks, WEEKDAY_LABELS } from '../lib/dates'
+import { getIntensityLevel, summarizeDate } from '../lib/habitData'
 import Tile from './Tile'
 import './css/Chart.css'
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const Chart = ({
+  data,
+  year,
+  selectedHabitId,
+  selectedDate,
+  onSelectDate
+}) => {
+  const weeks = getYearWeeks(year, data.settings.weekStartsOn)
 
-const toDateKey = (date) => [
-        date.getFullYear(),
-        String(date.getMonth() + 1).padStart(2, '0'),
-        String(date.getDate()).padStart(2, '0')
-    ].join('-')
-
-const getDatesForView = (viewMode, year) => {
-    const dates = []
-    const now = new Date()
-
-    const today = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate()
-    )
-
-    let start
-    let end
-
-    if (viewMode === 'year') {
-        start = new Date(year, 0, 1)
-        end = new Date(year, 11, 31)
-    } else if (viewMode === 'month') {
-        start = new Date(today.getFullYear(), today.getMonth(), 1)
-        end = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-    } else {
-        // week
-        const dayOfWeek = today.getDay()
-        start = new Date(today)
-        start.setDate(today.getDate() - dayOfWeek)
-
-        end = new Date(start)
-        end.setDate(start.getDate() + 6)
-    }
-
-    const current = new Date(start)
-    while (current <= end) {
-        dates.push(toDateKey(current))
-        current.setDate(current.getDate() + 1)
-    }
-
-    return dates
-}
-
-/* ---------- padding ---------- */
-
-const padDatesForWeeks = (dates) => {
-    if (!dates.length) return []
-
-    const firstDate = new Date(dates[0] + 'T00:00:00')
-    const leadingDays = firstDate.getDay()
-
-    return [
-        ...Array(leadingDays).fill(null),
-        ...dates
-    ]
-}
-
-const padDatesForMonth = (dates) => {
-    if (!dates.length) return []
-
-    const first = new Date(dates[0] + 'T00:00:00')
-    const last = new Date(dates[dates.length - 1] + 'T00:00:00')
-
-    const leading = first.getDay()
-    const trailing = 6 - last.getDay()
-
-    return [
-        ...Array(leading).fill(null),
-        ...dates,
-        ...Array(trailing).fill(null)
-    ]
-}
-
-/* ---------- intensity ---------- */
-
-const calculateIntensity = (entry, habits, selectedHabit) => {
-    if (!habits.length) return 0
-
-    if (selectedHabit !== 'all' && selectedHabit !== 'active') {
-        return entry[selectedHabit]?.completed ? 1 : 0
-    }
-
-    let completed = 0
-
-    for (const habit of habits) {
-        if (!entry[habit.id]?.completed) continue
-        if (selectedHabit === 'active' && !habit.active) continue
-        completed++
-    }
-
-    return completed / habits.length
-}
-
-/* ---------- shared renderer ---------- */
-
-const renderTiles = (dates, entries, habits, selectedHabit) =>
-    dates.map((date, index) => {
-        if (!date) {
-            return (
-                <div
-                    key={`empty-${index}`}
-                    className="tile tile--empty"
-                />
-            )
-        }
-
-        const entry = entries[date] || {}
-
-        return (
-            <Tile
-                key={date}
-                date={date}
-                entry={entry}
-                intensity={calculateIntensity(
-                    entry,
-                    habits,
-                    selectedHabit
-                )}
-            />
-        )
-    })
-
-/* ---------- component ---------- */
-
-const Chart = ({ habits, entries, selectedHabit, viewMode, year }) => {
-    const habitList = Object.values(habits)
-
-    /* ===== YEAR ===== */
-    if (viewMode === 'year') {
-        const dates = getDatesForView('year', year)
-        const paddedDates = padDatesForWeeks(dates)
-
-        return (
-            <div className="chart-wrapper">
-                <div className="chart-labels">
-                    {WEEKDAYS.map(day => (
-                        <div key={day} className="chart-label">
-                            {day}
-                        </div>
-                    ))}
-                </div>
-
-                <div className="chart">
-                    {renderTiles(
-                        paddedDates,
-                        entries,
-                        habitList,
-                        selectedHabit
-                    )}
-                </div>
-            </div>
-        )
-    }
-
-    /* ===== YEAR CALENDAR ===== */
-    if (viewMode === 'year-calendar') {
-        return (
-            <div className="year-calendar">
-                {Array.from({ length: 12 }).map((_, month) => {
-                    const start = new Date(year, month, 1)
-                    const end = new Date(year, month + 1, 0)
-
-                    const dates = []
-                    const current = new Date(start)
-                    while (current <= end) {
-                        dates.push(toDateKey(current))
-                        current.setDate(current.getDate() + 1)
-                    }
-
-                    const padded = padDatesForMonth(dates)
-
-                    return (
-                        <div key={month} className="calendar-month">
-                            <div className="calendar-month-title">
-                                {start.toLocaleString('default', {
-                                    month: 'long'
-                                })}
-                            </div>
-
-                            <div className="calendar-weekdays">
-                                {WEEKDAYS.map(d => (
-                                    <div key={d}>{d}</div>
-                                ))}
-                            </div>
-
-                            <div className="calendar-grid">
-                                {renderTiles(
-                                    padded,
-                                    entries,
-                                    habitList,
-                                    selectedHabit
-                                )}
-                            </div>
-                        </div>
-                    )
-                })}
-            </div>
-        )
-    }
-
-    /* ===== MONTH / WEEK ===== */
-
-    const dates = getDatesForView(viewMode, year)
-    const padded =
-        viewMode === 'month'
-            ? padDatesForMonth(dates)
-            : padDatesForWeeks(dates)
-
-    return (
-        <div className={`chart chart--${viewMode}`}>
-            {viewMode === 'month' && (
-                <div className="calendar-weekdays">
-                    {WEEKDAYS.map(d => (
-                        <div key={d}>{d}</div>
-                    ))}
-                </div>
-            )}
-
-            <div
-                className={
-                    viewMode === 'month'
-                        ? 'calendar-grid'
-                        : 'heatmap-grid'
-                }
-            >
-                {renderTiles(
-                    padded,
-                    entries,
-                    habitList,
-                    selectedHabit
-                )}
-            </div>
+  return (
+    <section className="chart-panel" aria-labelledby="chart-title">
+      <div className="section-heading">
+        <div>
+          <h2 id="chart-title">Contribution Chart</h2>
+          <p>{year}</p>
         </div>
-    )
+        <div className="chart-legend" aria-label="Completion intensity legend">
+          <span>Less</span>
+          {[0, 1, 2, 3, 4, 5].map((level) => (
+            <span key={level} className={`legend-swatch tile--level-${level}`} />
+          ))}
+          <span>More</span>
+        </div>
+      </div>
+
+      <div className="chart-scroll" role="region" aria-label={`${year} habit completion chart`}>
+        <div className="month-row" style={{ gridTemplateColumns: `repeat(${weeks.length}, var(--tile-size))` }}>
+          {weeks.map((week) => (
+            <span key={week[0].key}>{getMonthLabelForWeek(week)}</span>
+          ))}
+        </div>
+
+        <div className="chart-body">
+          <div className="weekday-column">
+            {WEEKDAY_LABELS.map((weekday, index) => (
+              <span key={weekday}>{index % 2 === 1 ? weekday : ''}</span>
+            ))}
+          </div>
+
+          <div className="year-grid" style={{ gridTemplateColumns: `repeat(${weeks.length}, var(--tile-size))` }}>
+            {weeks.flatMap((week) =>
+              week.map(({ key, inYear }) => {
+                const summary = summarizeDate(data, key, selectedHabitId)
+                const level = inYear ? getIntensityLevel(summary.rate) : 0
+
+                return (
+                  <Tile
+                    key={key}
+                    dateKey={key}
+                    summary={summary}
+                    level={level}
+                    selected={key === selectedDate}
+                    disabled={!inYear}
+                    onSelect={onSelectDate}
+                  />
+                )
+              })
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
 }
 
 export default Chart

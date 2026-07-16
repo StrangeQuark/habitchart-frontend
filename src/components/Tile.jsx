@@ -1,29 +1,21 @@
 import './css/Tile.css'
 
-const Tile = ({ intensity, date, entry }) => {
-    const green = Math.round(255 * intensity)
+const Tile = ({ dateKey, summary, level, selected, disabled, onSelect }) => {
+  const title = summary.total
+    ? `${dateKey}: ${summary.done}/${summary.total} completed`
+    : `${dateKey}: no active habits`
 
-    let title = date
-
-    if (entry && typeof entry === 'object') {
-        const lines = Object.values(entry).map(habit => {
-            const name = habit?.name ?? 'Unknown'
-            const completed = habit?.completed ? 'Completed' : 'Not completed'
-            return `${name}: ${completed}`
-        })
-
-        title = `${date}\n${lines.join('\n')}`
-    }
-
-    return (
-        <div
-            className="tile"
-            title={title}
-            style={{
-                backgroundColor: `rgb(0, ${green}, 0)`
-            }}
-        />
-    )
+  return (
+    <button
+      type="button"
+      className={`tile tile--level-${level}${selected ? ' tile--selected' : ''}`}
+      title={title}
+      aria-label={title}
+      aria-pressed={selected}
+      disabled={disabled}
+      onClick={() => onSelect(dateKey)}
+    />
+  )
 }
 
 export default Tile

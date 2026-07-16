@@ -4,7 +4,7 @@ FROM node:22-alpine AS builder
 WORKDIR /habitchart-frontend
 
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm ci
 
 COPY public ./public
 COPY src ./src
