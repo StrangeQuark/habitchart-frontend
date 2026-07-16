@@ -1,89 +1,74 @@
-.chart-wrapper {
-    display: flex;
-    align-items: flex-start;
-    width: 80vw;
-    padding-top: 40vh;
-    padding-left: 10vw;
+.chart-panel {
+  min-width: 0;
 }
 
-.chart-labels {
-    display: grid;
-    grid-template-rows: repeat(7, 2vh);
-    gap: 4px;
-    margin-right: 15px;
+.chart-scroll {
+  overflow-x: auto;
+  padding: 4px 2px 10px;
 }
 
-.chart-label {
-    font-size: 20px;
-    line-height: 26px;
-    color: #6e7781;
-    text-align: right;
-    user-select: none;
+.month-row {
+  display: grid;
+  gap: var(--tile-gap);
+  margin-left: 42px;
+  margin-bottom: 8px;
+  min-width: max-content;
+  color: var(--text-muted);
+  font-size: 0.74rem;
 }
 
-.chart {
-    display: grid;
-    grid-template-rows: repeat(7, 2vh);
-    grid-auto-flow: column;
-    gap: 4px;
-    width: 100%;
+.month-row span {
+  min-width: var(--tile-size);
+  white-space: nowrap;
 }
 
-.tile--empty {
-    background: transparent;
-    pointer-events: none;
+.chart-body {
+  display: flex;
+  gap: 10px;
+  min-width: max-content;
 }
 
-.heatmap-grid {
-    display: grid;
-    grid-auto-flow: column;
-    grid-template-rows: repeat(7, 26px);
-    gap: 4px;
+.weekday-column {
+  display: grid;
+  grid-template-rows: repeat(7, var(--tile-size));
+  gap: var(--tile-gap);
+  width: 32px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  line-height: var(--tile-size);
+  text-align: right;
 }
 
-.chart--month {
-    padding-top: 40vh;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    align-items: center;
-    height: 40vh;
+.year-grid {
+  display: grid;
+  grid-template-rows: repeat(7, var(--tile-size));
+  grid-auto-flow: column;
+  gap: var(--tile-gap);
+  min-width: max-content;
 }
 
-.calendar-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 26px);
-    gap: 4px;
-    font-size: 12px;
-    text-align: center;
-    color: #6e7781;
+.chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
 }
 
-.calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 26px);
-    gap: 4px;
+.legend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
 }
 
-.year-calendar {
-    padding-top: 5vh;
-    display: grid;
-    grid-template-columns: 40% auto 40%;
-    gap: 20px;
-    max-height: calc(100vh - 120px);
-    overflow-y: auto;
-    width: 100%;
-    height: 88vh;
-}
+@media (max-width: 760px) {
+  .month-row {
+    margin-left: 34px;
+  }
 
-.calendar-month {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    align-items: center;
-}
-
-.calendar-month-title {
-    font-weight: 600;
-    font-size: 14px;
+  .weekday-column {
+    width: 24px;
+    font-size: 0.64rem;
+  }
 }

@@ -1,193 +1,433 @@
-import { useEffect, useState } from 'react'
-import Toolbar from './Toolbar'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  FiArchive,
+  FiBell,
+  FiBellOff,
+  FiCheck,
+  FiRotateCcw,
+  FiSlash,
+  FiTrash2,
+  FiUpload,
+  FiX
+} from 'react-icons/fi'
 import Chart from './Chart'
+import Toolbar from './Toolbar'
+import {
+  addHabitToData,
+  archiveHabit,
+  calculateDashboardStats,
+  calculateHabitSummaries,
+  createInitialData,
+  deleteHabit,
+  formatPercent,
+  getActiveHabits,
+  getEntryStatus,
+  getHabitsForDate,
+  HABIT_COLORS,
+  normalizeData,
+  restoreHabit,
+  STATUS_DONE,
+  STATUS_MISSED,
+  STATUS_SKIPPED,
+  summarizeDate,
+  updateHabit,
+  updateHabitStatus
+} from '../lib/habitData'
+import { formatDisplayDate, getTodayKey } from '../lib/dates'
+import { exportHabitData, loadHabitData, saveHabitData } from '../lib/storage'
 import './css/Main.css'
 
-const STORAGE_KEY = 'habit-tracker:data'
-
-const emptyData = {
-    habits: {},
-    entries: {}
+const getNotificationPermission = () => {
+  if (!('Notification' in globalThis)) return 'unsupported'
+  return Notification.permission
 }
 
-const localDateKey = (date = new Date()) => {
-    const local = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate()
-    )
+const getNextReminderDelay = (time) => {
+  const [hours, minutes] = time.split(':').map(Number)
+  const now = new Date()
+  const reminder = new Date()
+  reminder.setHours(hours, minutes, 0, 0)
 
-    return [
-        local.getFullYear(),
-        String(local.getMonth() + 1).padStart(2, '0'),
-        String(local.getDate()).padStart(2, '0')
-    ].join('-')
+  if (reminder <= now) reminder.setDate(reminder.getDate() + 1)
+  return reminder.getTime() - now.getTime()
 }
 
-const todayKey = () => localDateKey()
+const getNotificationLabel = (permission) => {
+  if (permission === 'granted') return 'Enabled'
+  if (permission === 'denied') return 'Blocked'
+  if (permission === 'unsupported') return 'Unavailable'
+  return 'Off'
+}
 
 const Main = () => {
-    const [data, setData] = useState(emptyData)
-    const [selectedHabit, setSelectedHabit] = useState('active')
-    const [viewMode, setViewMode] = useState('year')
-    const [showProgressPopup, setShowProgressPopup] = useState(false)
-    const [progressDraft, setProgressDraft] = useState({})
+  const [data, setData] = useState(createInitialData)
+  const [loaded, setLoaded] = useState(false)
+  const [selectedDate, setSelectedDate] = useState(getTodayKey())
+  const [selectedHabitId, setSelectedHabitId] = useState('all')
+  const [newHabitName, setNewHabitName] = useState('')
+  const [newHabitColor, setNewHabitColor] = useState(HABIT_COLORS[0])
+  const [storageStatus, setStorageStatus] = useState('Loading')
+  const [notificationPermission, setNotificationPermission] = useState(getNotificationPermission)
 
-    useEffect(() => {
-        const stored = localStorage.getItem(STORAGE_KEY)
-        if (stored) setData(JSON.parse(stored))
-    }, [])
+  const addHabitRef = useRef(null)
+  const remindersRef = useRef(null)
+  const fileInputRef = useRef(null)
+  const todayKey = getTodayKey()
+  const year = new Date().getFullYear()
 
-    useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-    }, [data])
+  const stats = useMemo(() => calculateDashboardStats(data, todayKey), [data, todayKey])
+  const habitSummaries = useMemo(() => calculateHabitSummaries(data, todayKey), [data, todayKey])
+  const activeHabits = useMemo(() => getActiveHabits(data), [data])
+  const selectedDaySummary = useMemo(
+    () => summarizeDate(data, selectedDate, selectedHabitId),
+    [data, selectedDate, selectedHabitId]
+  )
+  const selectedDayHabits = useMemo(
+    () => getHabitsForDate(data, selectedDate, selectedHabitId),
+    [data, selectedDate, selectedHabitId]
+  )
 
-    const addHabit = () => {
-        const name = prompt('Habit name')
-        if (!name) return
+  useEffect(() => {
+    let mounted = true
 
-        const id = name.toLowerCase().replace(/\s+/g, '-')
+    loadHabitData().then((storedData) => {
+      if (!mounted) return
+      setData(storedData)
+      setLoaded(true)
+      setStorageStatus('Saved locally')
+    })
 
-        setData(prev => ({
-            ...prev,
-            habits: {
-                ...prev.habits,
-                [id]: {
-                    id,
-                    name,
-                    active: true,
-                    createdAt: new Date().toISOString()
-                }
-            }
-        }))
+    return () => {
+      mounted = false
     }
+  }, [])
 
-    const removeHabit = () => {
-        if (selectedHabit === 'all') return
+  useEffect(() => {
+    if (!loaded) return
 
-        setData(prev => ({
-            ...prev,
-            habits: {
-                ...prev.habits,
-                [selectedHabit]: {
-                    ...prev.habits[selectedHabit],
-                    active: false,
-                    removedAt: new Date().toISOString()
-                }
-            }
-        }))
+    saveHabitData(data)
+      .then(() => setStorageStatus('Saved locally'))
+      .catch(() => setStorageStatus('Storage unavailable'))
+  }, [data, loaded])
 
-        setSelectedHabit('active')
-    }
+  useEffect(() => {
+    if (!data.settings.reminderEnabled || notificationPermission !== 'granted') return undefined
 
-    const openProgressPopup = () => {
-        const today = todayKey()
-        const existing = data.entries[today] || {}
+    const timer = window.setTimeout(() => {
+      const latestStats = calculateDashboardStats(data, getTodayKey())
 
-        const draft = {}
-        Object.values(data.habits)
-            .filter(h => h.active)
-            .forEach(h => {
-                draft[h.id] = !!existing[h.id]?.completed
-            })
-
-        setProgressDraft(draft)
-        setShowProgressPopup(true)
-    }
-
-    const saveProgress = () => {
-        const today = todayKey()
-
-        setData(prev => {
-            const dayEntries = prev.entries[today] || {}
-
-            const updatedEntries = {}
-            Object.entries(progressDraft).forEach(([habitId, completed]) => {
-                const habit = prev.habits[habitId]
-                if (!habit) return
-
-                updatedEntries[habitId] = {
-                    completed,
-                    name: habit.name
-                }
-            })
-
-            return {
-                ...prev,
-                entries: {
-                    ...prev.entries,
-                    [today]: {
-                        ...dayEntries,
-                        ...updatedEntries
-                    }
-                }
-            }
+      if (latestStats.today.total > 0 && latestStats.today.done < latestStats.today.total) {
+        new Notification('HabitChart check-in', {
+          body: `${latestStats.today.done} of ${latestStats.today.total} habits are complete today.`,
+          tag: 'habitchart-daily-check-in'
         })
+      }
+    }, getNextReminderDelay(data.settings.reminderTime))
 
-        setShowProgressPopup(false)
+    return () => window.clearTimeout(timer)
+  }, [data, notificationPermission])
+
+  const updateData = (updater) => {
+    setData((current) => normalizeData(typeof updater === 'function' ? updater(current) : updater))
+  }
+
+  const handleAddHabit = (event) => {
+    event.preventDefault()
+    if (!newHabitName.trim()) return
+
+    updateData((current) => addHabitToData(current, newHabitName, { color: newHabitColor }))
+    setNewHabitName('')
+    setNewHabitColor(HABIT_COLORS[(HABIT_COLORS.indexOf(newHabitColor) + 1) % HABIT_COLORS.length])
+  }
+
+  const setStatus = (habitId, status) => {
+    updateData((current) => updateHabitStatus(current, todayKey, habitId, status))
+  }
+
+  const toggleDone = (habitId) => {
+    const currentStatus = getEntryStatus(data, todayKey, habitId)
+    setStatus(habitId, currentStatus === STATUS_DONE ? null : STATUS_DONE)
+  }
+
+  const handleReminderToggle = async () => {
+    if (!data.settings.reminderEnabled && 'Notification' in globalThis) {
+      const permission = Notification.permission === 'default'
+        ? await Notification.requestPermission()
+        : Notification.permission
+
+      setNotificationPermission(permission)
+      if (permission !== 'granted') return
     }
 
-    const deleteAllData = () => {
-        if(confirm("Delete all data? This action cannot be undone!"))
-            setData(emptyData)
+    updateData((current) => ({
+      ...current,
+      settings: {
+        ...current.settings,
+        reminderEnabled: !current.settings.reminderEnabled
+      }
+    }))
+  }
+
+  const handleExportData = () => {
+    const blob = new Blob([exportHabitData(data)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `habitchart-backup-${todayKey}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleImportData = (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        updateData(normalizeData(JSON.parse(reader.result)))
+        setStorageStatus('Backup imported')
+      } catch {
+        setStorageStatus('Import failed')
+      }
     }
+    reader.readAsText(file)
+    event.target.value = ''
+  }
 
-    return (
-        <div className="main">
-            <Toolbar
-                habits={data.habits}
-                selectedHabit={selectedHabit}
-                onSelectHabit={setSelectedHabit}
-                onAddHabit={addHabit}
-                onRemoveHabit={removeHabit}
-                onAddProgress={openProgressPopup}
-                viewMode={viewMode}
-                onChangeView={setViewMode}
-                onDeleteAllData={deleteAllData}
+  return (
+    <div className="app-shell">
+      <Toolbar
+        data={data}
+        stats={stats}
+        selectedHabitId={selectedHabitId}
+        onSelectHabit={setSelectedHabitId}
+        onExportData={handleExportData}
+        onFocusAddHabit={() => addHabitRef.current?.focus()}
+        onFocusReminders={() => remindersRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+      />
+
+      <main className="dashboard">
+        <section className="today-panel" aria-labelledby="today-title">
+          <div className="section-heading">
+            <div>
+              <h2 id="today-title">Today</h2>
+              <p>{formatDisplayDate(todayKey)}</p>
+            </div>
+            <span className="status-pill">{formatPercent(stats.today.rate)}</span>
+          </div>
+
+          <form className="add-habit-form" onSubmit={handleAddHabit}>
+            <input
+              ref={addHabitRef}
+              value={newHabitName}
+              onChange={(event) => setNewHabitName(event.target.value)}
+              placeholder="Add a habit"
+              aria-label="Habit name"
             />
+            <div className="color-picker" aria-label="Habit color">
+              {HABIT_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className={color === newHabitColor ? 'color-swatch color-swatch--selected' : 'color-swatch'}
+                  style={{ '--habit-color': color }}
+                  aria-label={`Use ${color}`}
+                  onClick={() => setNewHabitColor(color)}
+                />
+              ))}
+            </div>
+            <button type="submit" className="primary-button">Add</button>
+          </form>
 
-            <Chart
-                habits={data.habits}
-                entries={data.entries}
-                selectedHabit={selectedHabit}
-                viewMode={viewMode}
-                year={new Date().getFullYear()}
-            />
-
-            {showProgressPopup && (
-                <div className="popup-backdrop">
-                    <div className="popup">
-                        <h3>Today's Progress</h3>
-
-                        {Object.values(data.habits)
-                            .filter(h => h.active)
-                            .map(habit => (
-                                <label key={habit.id}>
-                                    <input
-                                        type="checkbox"
-                                        checked={progressDraft[habit.id] || false}
-                                        onChange={e =>
-                                            setProgressDraft(prev => ({
-                                                ...prev,
-                                                [habit.id]: e.target.checked
-                                            }))
-                                        }
-                                    />
-                                    {habit.name}
-                                </label>
-                            ))}
-
-                        <div className="popup-actions">
-                            <button onClick={saveProgress}>Save</button>
-                            <button onClick={() => setShowProgressPopup(false)}>
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
+          <div className="habit-checklist">
+            {activeHabits.length === 0 && (
+              <div className="empty-state">No active habits yet.</div>
             )}
-        </div>
-    )
+
+            {activeHabits.map((habit) => {
+              const status = getEntryStatus(data, todayKey, habit.id)
+              const summary = habitSummaries.find((item) => item.habit.id === habit.id)
+
+              return (
+                <article key={habit.id} className={`habit-row habit-row--${status || 'pending'}`}>
+                  <button
+                    type="button"
+                    className="habit-toggle"
+                    onClick={() => toggleDone(habit.id)}
+                    aria-label={`Toggle ${habit.name}`}
+                    style={{ '--habit-color': habit.color }}
+                  >
+                    {status === STATUS_DONE && <FiCheck aria-hidden="true" />}
+                  </button>
+
+                  <div className="habit-main">
+                    <strong>{habit.name}</strong>
+                    <span>{summary?.currentStreak ?? 0} day streak</span>
+                  </div>
+
+                  <div className="habit-actions">
+                    <button type="button" onClick={() => setStatus(habit.id, STATUS_SKIPPED)} title="Skip today">
+                      <FiSlash aria-hidden="true" />
+                    </button>
+                    <button type="button" onClick={() => setStatus(habit.id, STATUS_MISSED)} title="Mark missed">
+                      <FiX aria-hidden="true" />
+                    </button>
+                    <button type="button" onClick={() => updateData((current) => archiveHabit(current, habit.id))} title="Archive habit">
+                      <FiArchive aria-hidden="true" />
+                    </button>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        </section>
+
+        <Chart
+          data={data}
+          year={year}
+          selectedHabitId={selectedHabitId}
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+        />
+
+        <aside className="insight-column">
+          <section className="metric-panel" aria-labelledby="metrics-title">
+            <div className="section-heading">
+              <div>
+                <h2 id="metrics-title">Metrics</h2>
+                <p>{stats.completionsTotal} total completions</p>
+              </div>
+            </div>
+
+            <div className="metric-grid">
+              <div><span>{stats.currentStreak}</span><small>Current streak</small></div>
+              <div><span>{stats.longestStreak}</span><small>Longest streak</small></div>
+              <div><span>{formatPercent(stats.rate7)}</span><small>7 days</small></div>
+              <div><span>{formatPercent(stats.rate30)}</span><small>30 days</small></div>
+            </div>
+
+            <div className="best-day">
+              <span>Best day</span>
+              <strong>{stats.bestWeekday ? `${stats.bestWeekday.label} ${formatPercent(stats.bestWeekday.rate)}` : 'No data'}</strong>
+            </div>
+          </section>
+
+          <section ref={remindersRef} className="reminder-panel" aria-labelledby="reminders-title">
+            <div className="section-heading">
+              <div>
+                <h2 id="reminders-title">Reminder</h2>
+                <p>{getNotificationLabel(notificationPermission)}</p>
+              </div>
+              <button type="button" className="icon-button" onClick={handleReminderToggle}>
+                {data.settings.reminderEnabled ? <FiBell aria-hidden="true" /> : <FiBellOff aria-hidden="true" />}
+              </button>
+            </div>
+
+            <label className="field-label">
+              <span>Daily time</span>
+              <input
+                type="time"
+                value={data.settings.reminderTime}
+                onChange={(event) => updateData((current) => ({
+                  ...current,
+                  settings: { ...current.settings, reminderTime: event.target.value }
+                }))}
+              />
+            </label>
+          </section>
+        </aside>
+      </main>
+
+      <section className="lower-grid">
+        <section className="day-detail-panel" aria-labelledby="selected-day-title">
+          <div className="section-heading">
+            <div>
+              <h2 id="selected-day-title">{formatDisplayDate(selectedDate)}</h2>
+              <p>{selectedDaySummary.done} of {selectedDaySummary.total} completed</p>
+            </div>
+            <span className="status-pill">{formatPercent(selectedDaySummary.rate)}</span>
+          </div>
+
+          <div className="day-detail-list">
+            {selectedDayHabits.length === 0 && <div className="empty-state">No habits counted for this date.</div>}
+            {selectedDayHabits.map((habit) => {
+              const status = getEntryStatus(data, selectedDate, habit.id) || 'pending'
+
+              return (
+                <div key={habit.id} className="day-detail-row">
+                  <span className="habit-dot" style={{ '--habit-color': habit.color }} />
+                  <span>{habit.name}</span>
+                  <strong>{status}</strong>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+
+        <section className="manage-panel" aria-labelledby="manage-title">
+          <div className="section-heading">
+            <div>
+              <h2 id="manage-title">Habits</h2>
+              <p>{stats.activeHabits} active, {stats.archivedHabits} archived</p>
+            </div>
+          </div>
+
+          <div className="habit-management-list">
+            {habitSummaries.map(({ habit, currentStreak, longestStreak, rate30 }) => (
+              <article key={habit.id} className={habit.active ? 'manage-row' : 'manage-row manage-row--archived'}>
+                <span className="habit-dot" style={{ '--habit-color': habit.color }} />
+                <input
+                  value={habit.name}
+                  aria-label={`Rename ${habit.name}`}
+                  onChange={(event) => updateData((current) => updateHabit(current, habit.id, { name: event.target.value }))}
+                />
+                <span>{currentStreak}/{longestStreak} streak</span>
+                <span>{formatPercent(rate30)}</span>
+                {habit.active ? (
+                  <button type="button" onClick={() => updateData((current) => archiveHabit(current, habit.id))} title="Archive habit">
+                    <FiArchive aria-hidden="true" />
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => updateData((current) => restoreHabit(current, habit.id))} title="Restore habit">
+                    <FiRotateCcw aria-hidden="true" />
+                  </button>
+                )}
+                {!habit.active && (
+                  <button type="button" onClick={() => updateData((current) => deleteHabit(current, habit.id))} title="Delete habit">
+                    <FiTrash2 aria-hidden="true" />
+                  </button>
+                )}
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="backup-panel" aria-labelledby="backup-title">
+          <div className="section-heading">
+            <div>
+              <h2 id="backup-title">Backup</h2>
+              <p>{storageStatus}</p>
+            </div>
+          </div>
+
+          <div className="backup-actions">
+            <button type="button" onClick={handleExportData}>Export JSON</button>
+            <button type="button" onClick={() => fileInputRef.current?.click()}>
+              <FiUpload aria-hidden="true" />
+              Import JSON
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json"
+              onChange={handleImportData}
+            />
+          </div>
+        </section>
+      </section>
+    </div>
+  )
 }
 
 export default Main

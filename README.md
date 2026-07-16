@@ -1,40 +1,52 @@
-# HABITCHART-FRONTEND
-**HABITCHART-FRONTEND** is an open source UI for Habit Chart. It works in conjunction with the [HabitChart backend](https://github.com/StrangeQuark/habitchart) to serve the website hosted at [https://habit-chart.com](https://habit-chart.com)
-<br><br><br>
+# HabitChart Frontend
 
-## Technology Stack
-- Javascript
-- Vite
+HabitChart is a local-first habit tracker built around a GitHub-style contribution chart. Users can create habits, mark daily completion, archive old habits, inspect streaks and completion rates, and enable browser reminders without creating an account.
+
+## Stack
+
 - React
-- NPM
-- Docker & Docker Compose
-<br><br><br>
+- Vite
+- Vitest
+- IndexedDB
+- Browser Notifications
+- PWA service worker
+- Docker and Nginx
 
-## Getting Started
+## Local Development
 
-### Prerequisites
-- Docker and Docker Compose installed
-<br><br>
+Use Node `22.12.0` or newer.
 
-### Running the Application
-Clone the repository and start the service using Docker Compose:
-
+```bash
+npm install
+npm run dev
 ```
-git clone https://github.com/StrangeQuark/habitchart-frontend.git
-cd habitchart-frontend
+
+The app runs on `http://localhost:3001`.
+
+## Tests
+
+```bash
+npm test
+```
+
+## Production Build
+
+```bash
+npm run build
+```
+
+## Docker
+
+```bash
 docker-compose up --build
 ```
-<br>
 
-## Deployment
-This project includes a `Jenkinsfile` for use in CI/CD pipelines. Jenkins must be configured with:
+The container serves the app on `http://localhost:3001`.
 
-- Docker support
-<br><br>
+## Data And Privacy
+
+Habit data, settings, reminders, and metrics are stored locally in the browser. The current frontend does not require email, login, or personal profile data. Backup and restore are available through JSON export/import.
 
 ## License
-This project is licensed under the GNU General Public License. See `LICENSE.md` for details.
-<br><br>
 
-## Contributing
-Contributions are welcome! Feel free to open issues or submit pull requests.
+This project is licensed under the GNU General Public License. See `LICENSE` for details.

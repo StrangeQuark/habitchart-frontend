@@ -1,11 +1,7 @@
 services:
   habitchart-frontend:
     build: .
-    networks:
-      - habitchart-network
     ports:
       - "3001:80"
     container_name: habitchart-frontend
-networks:
-  habitchart-network:
-    external: true
+    restart: unless-stopped

@@ -1,5 +1,46 @@
 .tile {
-    width: 26px;
-    height: 26px;
-    background-color: black;
+  width: var(--tile-size);
+  height: var(--tile-size);
+  border: 1px solid rgba(27, 31, 35, 0.06);
+  border-radius: 3px;
+  padding: 0;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.tile:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(23, 32, 24, 0.14);
+}
+
+.tile:disabled {
+  opacity: 0.35;
+}
+
+.tile--selected {
+  border-color: #172018;
+  box-shadow: 0 0 0 2px rgba(23, 32, 24, 0.16);
+}
+
+.tile--level-0 {
+  background: #e7ece7;
+}
+
+.tile--level-1 {
+  background: #d5ead9;
+}
+
+.tile--level-2 {
+  background: #9bd9a7;
+}
+
+.tile--level-3 {
+  background: #54bd71;
+}
+
+.tile--level-4 {
+  background: #2f9655;
+}
+
+.tile--level-5 {
+  background: #176b38;
 }
